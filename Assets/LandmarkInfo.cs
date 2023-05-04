@@ -6,5 +6,4 @@ using UnityEngine.UI;
 public class LandmarkInfo : MonoBehaviour
 {
     public string name;
-    public int uv_index;
 }

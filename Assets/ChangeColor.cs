@@ -2,15 +2,22 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
+// using System.Serializable;
+
+// using Newtonsoft.Json;
 
 public class ChangeColor : MonoBehaviour
 {
     private Material[] material_list = new Material[4];
     public GameObject obj;
+    public double ObjLat;
+    public double ObjLon;
     private bool beingHandled = false;
     private string URL = "https://api.openweathermap.org/data/2.5/weather";
     private string urlParameters = "appid=caa108cfd7c38543a5e12d424e76f80e";
-
+    public double temp = 0;
+    public double pressure = 0;
+    public double humidity = 0;
 
     void Start(){
         material_list[0] = Resources.Load("SIGN_red", typeof(Material)) as Material;
@@ -22,10 +29,21 @@ public class ChangeColor : MonoBehaviour
     }
 
     private IEnumerator changeMaterial() {
-        StartCoroutine(GetRequest(10.7941034426, 106.721491814));
-        obj.GetComponent<Renderer>().material = material_list[0];
+        StartCoroutine(GetRequest(ObjLat, ObjLon));
+        if (temp >= 40 ) {
+            obj.GetComponent<Renderer>().material = material_list[0];
+        }
+        else if (temp >= 35) {
+            obj.GetComponent<Renderer>().material = material_list[1];
+        }
+        else if (temp >= 30) {
+            obj.GetComponent<Renderer>().material = material_list[2];
+        }
+        else {
+            obj.GetComponent<Renderer>().material = material_list[3];
+        }
         beingHandled = true;
-        yield return new WaitForSeconds(5);
+        yield return new WaitForSeconds(3600);
         beingHandled = false;
         StartCoroutine(changeMaterial());
     }
@@ -33,7 +51,6 @@ public class ChangeColor : MonoBehaviour
     {
         string urlParameters_new = "?lat=" + lat + "&lon=" + lon + "&" + urlParameters;
         string uri = URL + urlParameters_new;
-        Debug.Log(uri);
         using (UnityWebRequest webRequest = UnityWebRequest.Get(uri))
         {
             // Request and wait for the desired page.
@@ -41,7 +58,6 @@ public class ChangeColor : MonoBehaviour
 
             string[] pages = uri.Split('/');
             int page = pages.Length - 1;
-
             switch (webRequest.result)
             {
                 case UnityWebRequest.Result.ConnectionError:
@@ -52,11 +68,14 @@ public class ChangeColor : MonoBehaviour
                     Debug.LogError(pages[page] + ": HTTP Error: " + webRequest.error);
                     break;
                 case UnityWebRequest.Result.Success:
-                    Debug.Log(pages[page] + ":\nReceived: " + webRequest.downloadHandler.text);
+                    Debug.Log(pages[page] + ":\nReceived: " + webRequest.downloadHandler.text + webRequest.downloadHandler.text.GetType());
+                    var objs = JsonUtility.FromJson<WeatherInfo>(webRequest.downloadHandler.text);
+                    temp = objs.main.temp - 272.15; // kelvin to celcius
+                    pressure = objs.main.pressure;
+                    humidity = objs.main.humidity;
+                    Debug.Log("Processed: " + temp + " " + pressure + " " + humidity);
                     break;
             }
-
-
         }
     }
     
@@ -97,4 +116,25 @@ public class ChangeColor : MonoBehaviour
     {
         
     }
+}
+
+[System.Serializable]
+public class coord {
+    public double lon;
+    public double lat;
+}
+[System.Serializable]
+public class main {
+    public double temp;
+    public double pressure;
+    public double humidity;
+}
+[System.Serializable]
+public class WeatherInfo {
+    public coord coord;
+    public double lon;
+    public double lat;
+    public main main;
+    // public double speed;
+    // public double all;     // cloud
 }
